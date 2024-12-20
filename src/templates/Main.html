@@ -4,92 +4,127 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Lancer le programme C++</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #f0f8ff;
+            color: #333;
+            margin: 0;
+            padding: 20px;
+        }
+
+        header {
+            background-color: #4CAF50;
+            color: white;
+            text-align: center;
+            padding: 10px 0;
+        }
+
+        h1 {
+            margin-bottom: 30px;
+        }
+
+        h2 {
+            background-color: #4CAF50;
+            color: white;
+            text-align: center;
+            padding: 10px 0;
+        }
+
+        pre {
+            background-color: #ffffff;
+            color: #333;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            font-size: 1.1em;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+
+        #data {
+            overflow-y: auto;
+            max-height: 400px;
+        }
+
+        #footer {
+            text-align: center;
+            padding: 10px;
+            margin-top: 20px;
+            background-color: #4CAF50;
+            color: white;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        .stream-label {
+            display: block;
+            margin: 10px 0;
+            font-size: 1.2em;
+            color: #4CAF50;
+        }
+    </style>
 </head>
 <body>
-    <h1>Lancer le programme C++ via Flask</h1>
+<header>Lancer le programme C++ via Flask</header>
+<p></p>
+<form id="launchForm" action="/run" method="post">
+    <label for="arg1">Argument 1 :</label>
+    <input type="number" id="arg1" name="args[arg1]" required><br><br>
 
-    <!-- Formulaire pour lancer le programme -->
-    <form id="launchForm">
-        <label for="arg1">Argument 1 :</label>
-        <input type="number" id="arg1" name="args[arg1]" required><br><br>
+    <label for="arg2">Argument 2 :</label>
+    <input type="number" id="arg2" name="args[arg2]" required><br><br>
 
-        <label for="arg2">Argument 2 :</label>
-        <input type="number" id="arg2" name="args[arg2]" required><br><br>
+    <label for="delay_ms">Délai (ms) :</label>
+    <input type="number" id="delay_ms" name="args[delay_ms]" min="100" max="2000" required><br><br>
 
-        <label for="delay_ms">Délai (ms) :</label>
-        <input type="number" id="delay_ms" name="args[delay_ms]" min="100" max="2000" required><br><br>
+    <input type="submit" value="Lancer">
+</form>
 
-        <input type="submit" value="Lancer le programme et récupérer le flux">
-    </form>
+<h3>Résultats :</h3>
+<pre id="output"></pre>
 
-    <h2>Résultats :</h2>
-    <pre id="output"></pre>
+<footer id="footer">
+    Réalisé par : <strong>EDOUARD</strong>, <strong>JACQUOT</strong>, et <strong>MIESCH</strong>
+</footer>
 
-    <script>
-        // Lors du clic sur le formulaire pour lancer le programme et récupérer le flux
-        document.getElementById('launchForm').addEventListener('submit', function(event) {
-            event.preventDefault();
+<script>
+    document.getElementById('launchForm').addEventListener('submit', function(event) {
+        event.preventDefault(); // Empêcher le rechargement de la page
 
-            // Récupérer les valeurs des champs de formulaire
-            var arg1 = document.getElementById('arg1').value;
-            var arg2 = document.getElementById('arg2').value;
-            var delay_ms = document.getElementById('delay_ms').value;
+        // Récupérer les valeurs des champs
+        var arg1 = document.getElementById('arg1').value;
+        var arg2 = document.getElementById('arg2').value;
+        var delay_ms = document.getElementById('delay_ms').value;
 
-            console.log("Données soumises:", arg1, arg2, delay_ms); // Debug
+        // Construire un objet JSON simple
+        var data = {
+            arg1: parseInt(arg1, 10), // Convertir en entier
+            arg2: parseInt(arg2, 10), // Convertir en entier
+            delay_ms: parseInt(delay_ms, 10) // Convertir en entier
+        };
 
-            // Créer un objet JSON avec les données du formulaire
-            var data = {
-                args: {
-                    arg1: arg1,
-                    arg2: arg2,
-                    delay_ms: delay_ms
-                }
-            };
-
-            // Envoyer la requête POST pour lancer le programme C++
-            fetch('/run', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(data)  // convertir les données en JSON
-            })
+        // Envoyer une requête POST avec le JSON simple
+        fetch('/run', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(data) // Convertir en JSON string
+        })
             .then(response => response.json())
             .then(data => {
-                // Ne pas afficher la réponse de lancement du programme dans l'output
-                // Au lieu de ça, démarrer directement le flux SSE
-                startStream(arg1, arg2, delay_ms);
+                // Afficher les résultats dans l'élément <pre>
+                document.getElementById('output').textContent = data.outputs.join('\n');
             })
-            .catch(error => {
-                console.error('Erreur lors du lancement du programme C++ :', error);
-            });
-        });
+            .catch(error => console.error('Erreur :', error));
+    });
 
-        // Fonction pour démarrer le flux SSE
-        function startStream(arg1, arg2, delay_ms) {
-            console.log("Démarrage du flux avec:", arg1, arg2, delay_ms); // Debug
-
-            // Vérifier que les valeurs sont valides
-            if (arg1 === "" || arg2 === "" || delay_ms === "") {
-                console.error("Tous les champs doivent être remplis !");
-                return;
-            }
-
-            // Ouvrir une connexion EventSource pour écouter les sorties du flux
-            var source = new EventSource('/run_stream?arg1=' + encodeURIComponent(arg1) + '&arg2=' + encodeURIComponent(arg2) + '&delay_ms=' + encodeURIComponent(delay_ms));
-
-            // Lorsque de nouvelles données arrivent via SSE, les ajouter à l'affichage
-            source.onmessage = function(event) {
-                console.log("Données reçues du flux:", event.data); // Debug
-                document.getElementById('output').textContent += event.data + '\n';
-            };
-
-            // Gestion des erreurs éventuelles du flux SSE
-            source.onerror = function(error) {
-                console.error("Erreur dans le flux SSE:", error);
-                source.close();
-            };
-        }
-    </script>
+</script>
 </body>
 </html>
